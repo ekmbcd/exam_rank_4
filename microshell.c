@@ -94,6 +94,7 @@ int exec(t_cmd *cmd, char **env)
 	// check if fork fails
 	if (id == -1)
 		ft_quit();
+	
 	// child process
 	if (!id)
 	{
@@ -103,7 +104,11 @@ int exec(t_cmd *cmd, char **env)
 		if (cmd->fd[0])
 			dup2(cmd->fd[0], 0);
 		execve(cmd->args[0], cmd->args, env);
-		exit(1);		// maybe unnecessary
+		// if execve returns it means it failed
+		print_err("error: cannot execute ");
+		print_err(cmd->args[0]);
+		print_err("\n");
+		exit(1);
 	}
 	// parent process
 	waitpid(id, 0, 0);
@@ -192,8 +197,11 @@ int main(int ac, char **av, char **env)
 	while (++n < ac)
 	{
 		// skip multiple ";"
-		while (av[n] && !strcmp(av[n], ";"))
+		while (n < ac && !strcmp(av[n], ";"))
 			n++;
+		// avoid segfault
+		if (n >= ac)
+			break;
 		// the first node
 		if (!list)
 		{
