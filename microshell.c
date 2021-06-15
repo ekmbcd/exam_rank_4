@@ -33,6 +33,7 @@ typedef struct	s_cmd
 int ft_strlen(char *str)
 {
 	int i = 0;
+
 	while (str[i])
 		i++;
 	return (i);
@@ -51,17 +52,42 @@ void ft_quit()
 
 char 	*ft_strdup(char *str)
 {
-	int i = 0;
+	int i = -1;
 	char *ret;
 
 	if (!(ret = malloc(ft_strlen(str) + 1)))
 		ft_quit();
-	while (str[i])
-	{
+	while (str[++i])
 		ret[i] = str[i];
-		i++;
-	}
 	ret[i] = 0;
+	return (ret);
+}
+
+t_cmd *new_node(char **av, int *n)
+{
+	int i = 0;
+	// malloc node
+	t_cmd *ret = malloc(sizeof(t_cmd));
+
+	if (!ret)
+		ft_quit();
+	// malloc args
+	if (!(ret->args = malloc(sizeof(char *) * 200)))  //yolo
+		ft_quit();
+	// remember to set everything to 0
+	ret->pipe = 0;
+	ret->next = 0;
+	ret->fd[0] = 0;
+	ret->fd[1] = 0;
+	// copy strings in args until we find ";" or "|" or av ends
+	while (av[*n] && strcmp(av[*n], ";") && strcmp(av[*n], "|"))
+		// remember n is a pointer
+		ret->args[i++] = ft_strdup(av[(*n)++]);
+	// remember to null-terminate args
+	ret->args[i] = 0;
+	// set pipe to 1 if we encountered a "|" at the end
+	if (av[*n] && !strcmp(av[*n], "|"))
+		ret->pipe = 1;
 	return (ret);
 }
 
@@ -87,14 +113,13 @@ int cd(char **argv)
 int exec(t_cmd *cmd, char **env)
 {
 	int id;
+
 	// builtin cd (no fork!)
 	if (!strcmp(cmd->args[0], "cd"))
 		return(cd(cmd->args));
-	id = fork();
 	// check if fork fails
-	if (id == -1)
+	if ((id = fork()) == -1)
 		ft_quit();
-	
 	// child process
 	if (!id)
 	{
@@ -142,38 +167,11 @@ void do_stuff(t_cmd * cmds, char **env)
 	}
 }
 
-t_cmd *new_node(char **av, int *n)
-{
-	int i = 0;
-	// malloc node
-	t_cmd *ret = malloc(sizeof(t_cmd));
-	if (!ret)
-		ft_quit();
-	// malloc args
-	if (!(ret->args = malloc(sizeof(char *) * 200)))  //yolo
-		ft_quit();
-	// remember to set everything to 0
-	ret->pipe = 0;
-	ret->next = 0;
-	ret->fd[0] = 0;
-	ret->fd[1] = 0;
-
-	// copy strings in args until we find ";" or "|" or av ends
-	while (av[*n] && strcmp(av[*n], ";") && strcmp(av[*n], "|"))
-		// remember n is a pointer
-		ret->args[i++] = ft_strdup(av[(*n)++]);
-	// set pipe to 1 if we encountered a "|" at the end
-	if (av[*n] && !strcmp(av[*n], "|"))
-		ret->pipe = 1;
-	// remember to null-terminate args
-	ret->args[i] = 0;
-	return (ret);
-}
-
 void free_stuff(t_cmd *cmds)
 {
 	int i;
 	t_cmd * tmp;
+
 	while (cmds)
 	{
 		tmp = cmds->next;
@@ -197,11 +195,8 @@ int main(int ac, char **av, char **env)
 	while (++n < ac)
 	{
 		// skip multiple ";"
-		while (n < ac && !strcmp(av[n], ";"))
-			n++;
-		// avoid segfault
-		if (n >= ac)
-			break;
+		if (!strcmp(av[n], ";"))
+			continue;
 		// the first node
 		if (!list)
 		{
