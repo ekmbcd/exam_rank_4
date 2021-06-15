@@ -2,7 +2,6 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <sys/wait.h>
-
 #include <stdio.h>
 
 typedef struct	s_cmd
@@ -50,19 +49,6 @@ void ft_quit()
 	exit(1);
 }
 
-char 	*ft_strdup(char *str)
-{
-	int i = -1;
-	char *ret;
-
-	if (!(ret = malloc(ft_strlen(str) + 1)))
-		ft_quit();
-	while (str[++i])
-		ret[i] = str[i];
-	ret[i] = 0;
-	return (ret);
-}
-
 t_cmd *new_node(char **av, int *n)
 {
 	int i = 0;
@@ -82,7 +68,7 @@ t_cmd *new_node(char **av, int *n)
 	// copy strings in args until we find ";" or "|" or av ends
 	while (av[*n] && strcmp(av[*n], ";") && strcmp(av[*n], "|"))
 		// remember n is a pointer
-		ret->args[i++] = ft_strdup(av[(*n)++]);
+		ret->args[i++] = av[(*n)++];
 	// remember to null-terminate args
 	ret->args[i] = 0;
 	// set pipe to 1 if we encountered a "|" at the end
@@ -169,16 +155,11 @@ void do_stuff(t_cmd * cmds, char **env)
 
 void free_stuff(t_cmd *cmds)
 {
-	int i;
 	t_cmd * tmp;
 
 	while (cmds)
 	{
 		tmp = cmds->next;
-		i = 0;
-		// remember to free each string inside args
-		while (cmds->args[i])
-			free(cmds->args[i++]);
 		free(cmds->args);
 		free(cmds);
 		cmds = tmp;
